@@ -1,15 +1,7 @@
-const crypto = require('crypto');
-const mongoose = require('../../database/connection');
-
 import { Schema } from 'mongoose';
+import { IUserDataModel } from '../../common/interfaces/user.interface';
 
-export interface IUserDataModel {
-    id: string;
-    name: string;
-    username: string;
-    email: string;
-    password: string;
-}
+const mongoose = require('../../database/connection');
 
 const UserModel: Schema<IUserDataModel> = new mongoose.Schema(
     {
@@ -20,17 +12,10 @@ const UserModel: Schema<IUserDataModel> = new mongoose.Schema(
         username: {
             type: String,
             required: true,
-            unique: true,
         },
         email: {
             type: String,
             required: true,
-            unique: true,
-        },
-        password: {
-            type: String,
-            required: true,
-            select: false,
         }
     },
     {

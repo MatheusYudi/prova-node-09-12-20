@@ -1,8 +1,8 @@
 import { ObjectID } from 'mongodb';
 import { Request, Response } from 'express';
-import { IUserDataModel } from '../models/user.model';
 import { UserService } from '../services/user.service';
 import { USER_MESSAGES } from '../../common/constants/userMessages';
+import { IUserDataModel } from '../../common/interfaces/user.interface';
 
 export class UserController {
     private static instance: UserController;
@@ -35,7 +35,6 @@ export class UserController {
             }
         }
         catch (error) {
-            console.log('error: ', error);
             return res.status(500).send({ error: true, message: 'Erro ao buscar os Usuários' });
         }
     }
@@ -64,7 +63,6 @@ export class UserController {
             }
         }
         catch (error) {
-            console.log('error: ', error);
             return res.status(500).send({ error: true, message: 'Erro ao buscar Usuário' });
         }
     }
@@ -81,20 +79,18 @@ export class UserController {
             const response: any = await UserService.getInstance().createUser(userData);
 
             // Validação dos dados do Usuário
-            if (response['incompleteData']) {
+            if (response?.incompleteData) {
                 return res.status(400).send(USER_MESSAGES.incompleteData);
-            }
-
-            // Validação de duplicidade de Usuário
-            if (response['userExists']) {
-                return res.status(409).send(USER_MESSAGES.alreadyExists);
             }
 
             return res.status(201).send({ ...USER_MESSAGES.create['success'], data: response });
         }
         catch (error) {
-            console.log('error: ', error);
-            return res.status(500).send(USER_MESSAGES.create['failure'])
+            if (error['code'] === 11000) {
+                return res.status(409).send({ error: true, message: `Usuário já cadastrado com este dado: ${error.keyValue['username'] || error.keyValue['email']}` });
+            }
+
+            return res.status(500).send(error);
         }
     }
 
@@ -112,22 +108,25 @@ export class UserController {
                 return res.status(400).send(USER_MESSAGES.invalidID);
             }
 
+            const response = await UserService.getInstance().updateUser(userData);
+
             // Validação dos dados do Usuário
-            if (!userData) {
+            if (response?.incompleteData) {
                 return res.status(400).send(USER_MESSAGES.incompleteData);
             }
 
-            const response = await UserService.getInstance().updateUser(userData);
-
             // Validação de existência de Usuário
-            if (!response['userExists']) {
+            if (response?.userNotExists) {
                 return res.status(404).send(USER_MESSAGES.notFound);
             }
 
             return res.status(200).send({ ...USER_MESSAGES.update['success'], data: response });
         }
         catch (error) {
-            console.log('error: ', error);
+            if (error['code'] === 11000) {
+                return res.status(409).send({ error: true, message: `Usuário já cadastrado com este dado: ${error.keyValue['username'] || error.keyValue['email']}` });
+            }
+
             return res.status(500).send(USER_MESSAGES.update['failure']);
         }
     }
@@ -149,14 +148,13 @@ export class UserController {
             const response = await UserService.getInstance().deleteUser(userId);
 
             // Validação de existência de Usuário
-            if (!response['userExists']) {
+            if (response?.userNotExists) {
                 return res.status(404).send(USER_MESSAGES.notFound);
             }
 
-            return res.status(200).send(USER_MESSAGES.delete['success']);
+            return res.status(200).send({ ...USER_MESSAGES.delete['success'], id: response['_id'] });
         }
         catch (error) {
-            console.log('error: ', error);
             return res.status(500).send(USER_MESSAGES.delete['failure']);
         }
     }

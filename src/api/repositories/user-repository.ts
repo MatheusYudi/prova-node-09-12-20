@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { IUserDataModel } from '../models/user.model';
+import { IUserDataModel } from '../../common/interfaces/user.interface';
 
 const User: Schema<IUserDataModel> = require('../models/user.model');
 
@@ -11,6 +11,9 @@ export class UserRepository {
         this.model = User;
     }
 
+    /**
+     * Retorna a instância do Repository
+     */
     public static getInstance(): UserRepository {
         if (!UserRepository.instance) {
             UserRepository.instance = new UserRepository();
@@ -38,19 +41,17 @@ export class UserRepository {
     }
 
     public async delete(userId: string): Promise<any> {
-        return await this.model.deleteOne({ userId });
+        return await this.model.findByIdAndRemove(userId);
     }
 
-    public async userExists(user: IUserDataModel): Promise<boolean> {
-        const { username, email } = user;
-
-        return await this.model.exists({ email, username });
+    public async userExists(userId: string): Promise<boolean> {
+        return await this.model.exists({ _id: userId });
     }
 
     public isValid(user: IUserDataModel): boolean {
-        const required: string[] = ['name', 'email', 'username', 'password'];
+        const required: string[] = ['name', 'email', 'username'];
  
-        // Retorna false caso não exista nenhum dado ou algum dos obrigatórios falte
+        // Retorna false caso não exista nenhum dado ou algum dos obrigatórios esteja faltando
         if (!user || required.some((key: string) => !user[key])) {
             return false;
         }

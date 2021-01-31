@@ -1,9 +1,12 @@
-import { IUserDataModel } from '../models/user.model';
 import { UserRepository } from '../repositories/user-repository';
+import { IUserDataModel } from '../../common/interfaces/user.interface';
 
 export class UserService {
     private static instance: UserService;
 
+    /**
+     * Retorna a instância do Service
+     */
     public static getInstance(): UserService {
         if (!UserService.instance) {
             UserService.instance = new UserService();
@@ -30,28 +33,35 @@ export class UserService {
             return { incompleteData: true };
         }
 
-        // Validação de duplicidade de Usuário
-        if (await UserRepository.getInstance().userExists(user)) {
-            return { userExists: true };
-        }
+        const record: IUserDataModel = await UserRepository.getInstance().create(user);
 
-        const record = await UserRepository.getInstance().create(user);
-
-        return record;
+        return { _id: record['id'], name: record['name'], username: record['username'], email: record['email'] };
     }
 
     public async updateUser(user: IUserDataModel): Promise<{ [key: string]: any }> {
-        // Validação de duplicidade de Usuário
-        if (await UserRepository.getInstance().userExists(user)) {
-            return { userExists: true };
+        // Validação dos dados do Usuário
+        if (!UserRepository.getInstance().isValid(user)) {
+            return { incompleteData: true };
         }
 
-        const record = await UserRepository.getInstance().create(user);
+        // Validação de existência de Usuário
+        if (!await UserRepository.getInstance().userExists(user['id'])) {
+            return { userNotExists: true };
+        }
+
+        const record = await UserRepository.getInstance().update(user);
 
         return record;
     }
 
-    public async deleteUser(userId: string): Promise<any> {
-        return await UserRepository.getInstance().delete(userId);
+    public async deleteUser(userId: string): Promise<{ [key: string]: any }> {
+        // Validação de existência de Usuário
+        if (!await UserRepository.getInstance().userExists(userId)) {
+            return { userNotExists: true };
+        }
+
+        const record = await UserRepository.getInstance().delete(userId);
+
+        return record;
     }
 }
